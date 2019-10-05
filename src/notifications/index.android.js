@@ -1,5 +1,6 @@
-import firebase from 'react-native-firebase'
+import messaging from '@react-native-firebase/messaging'
 import { Alert, AppState, Linking } from 'react-native'
+import AsyncStorage from '@react-native-community/async-storage'
 
 /**
  * App behavior when receiving messages that include both notification and data payloads
@@ -39,6 +40,7 @@ class PushNotification {
 
   static configure(options) {
 
+    /*
     // Notification was received in the background
     notificationOpenedListener = firebase.notifications()
       .onNotificationOpened(notificationOpen => {
@@ -50,25 +52,41 @@ class PushNotification {
       .onNotification(notification => {
         options.onNotification(parseNotification(notification, true))
     })
+    */
 
-    // FIXME
-    // firebase.messaging().requestPermission() always resolves to null
-    // We tell the user to open the app settings to enable notifications
+    AsyncStorage.getItem('messages').then(msgs => {
+      // const messageArray = JSON.parse(msgs);
+      console.log('RNFirebase msgs', msgs);
+    });
 
-    // firebase.messaging()
-    //   .requestPermission()
-    //   .then(() => {
-    //     // User has authorised
-    //   })
-    //   .catch(error => {
-    //     // User has rejected permissions
-    //   })
+    messaging().onMessage(async (remoteMessage) => {
+      console.log('RNFirebase FCM Message Data:', remoteMessage.data);
 
-    firebase.messaging().hasPermission()
+       // // Update a users messages list using AsyncStorage
+       // const currentMessages = await AsyncStorage.get('messages');
+       // const messageArray = JSON.parse(currentMessages);
+       // messageArray.push(remoteMessage.data);
+       // await AsyncStorage.set('messages', JSON.stringify(messageArray));
+    })
+
+    // messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+    //   // Update a users messages list using AsyncStorage
+    //   let currentMessages = await AsyncStorage.getItem('messages')
+    //   let messageArray = JSON.parse(currentMessages)
+    //   if (!messageArray) {
+    //     messageArray = []
+    //   }
+    //   messageArray.push(remoteMessage.data);
+    //   await AsyncStorage.setItem('messages', JSON.stringify(messageArray));
+
+    //   // console.log('FIREBASE setBackgroundMessageHandler', remoteMessage.data);
+    // })
+
+    messaging().hasPermission()
       .then(enabled => {
 
         if (!enabled) {
-
+          // We tell the user to open the app settings to enable notifications
           Alert.alert(
             'Notifications désactivées',
             'Voulez-vous ouvrir les paramètres de l\'application ?',
@@ -86,9 +104,9 @@ class PushNotification {
                     // Check again if notifications have been enabled
                     if ('active' === nextState) {
                       AppState.removeEventListener('change', appStateChangeListener)
-                      firebase.messaging().hasPermission()
+                      messaging().hasPermission()
                         .then(enabled => {
-                          firebase.messaging()
+                          messaging()
                             .getToken()
                             .then(fcmToken => {
                               if (fcmToken) {
@@ -110,7 +128,7 @@ class PushNotification {
             }
           )
         } else {
-          firebase.messaging()
+          messaging()
             .getToken()
             .then(fcmToken => {
               if (fcmToken) {
@@ -122,14 +140,13 @@ class PushNotification {
       })
       .catch(e => console.log(e))
 
-    tokenRefreshListener = firebase.messaging()
+    tokenRefreshListener = messaging()
       .onTokenRefresh(fcmToken => options.onRegister(fcmToken))
-
   }
 
   static removeListeners() {
-    notificationOpenedListener()
-    notificationListener()
+    // notificationOpenedListener()
+    // notificationListener()
     tokenRefreshListener()
   }
 
